@@ -129,53 +129,53 @@ class AudioBridge:
 
     def get_audio_devices_speakers(self):
         # Get list of audio device indices
-        devices = []
+        devices_speakers = []
         for i in range(self.pa_speakers.get_device_count()):
             info = self.pa_speakers.get_device_info_by_index(i)
             #devices.append(f"{info['index']}, {info['name']}")
             input_channels_speakers = info['maxInputChannels']
             output_channels_speakers = info['maxOutputChannels']
-            devices.append(f"{info['index']}, {info['name']}, Input channels: {input_channels_speakers}, Output channels: {output_channels_speakers}")
-        return devices
+            devices_speakers.append(f"{info['index']}, {info['name']}, Input channels: {input_channels_speakers}, Output channels: {output_channels_speakers}")
+        return devices_speakers
     
     def get_audio_devices_mic(self):
         # Get list of audio device indices
-        devices = []
+        devices_mic = []
         for i in range(self.pa_mic.get_device_count()):
             info = self.pa_mic.get_device_info_by_index(i)
             #devices.append(f"{info['index']}, {info['name']}")
             input_channels_mic = info['maxInputChannels']
             output_channels_mic = info['maxOutputChannels']
-            devices.append(f"{info['index']}, {info['name']}, Input channels: {input_channels_mic}, Output channels: {output_channels_mic}")
-        return devices
+            devices_mic.append(f"{info['index']}, {info['name']}, Input channels: {input_channels_mic}, Output channels: {output_channels_mic}")
+        return devices_mic
     
     def get_default_input_device_speakers(self):
         # Get default input device info
-        device_info = self.pa_speakers.get_default_input_device_info()
+        device_info_speakers = self.pa_speakers.get_default_input_device_info()
         
         # Return device name with index number
-        return f"{device_info['index']}, {device_info['name']}"
+        return f"{device_info_speakers['index']}, {device_info_speakers['name']}"
 
     def get_default_output_device_speakers(self):
         # Get default input device info
-        device_info = self.pa_speakers.get_default_output_device_info()
+        device_info_speakers = self.pa_speakers.get_default_output_device_info()
 
         # Return device name with index number
-        return f"{device_info['index']}, {device_info['name']}"
+        return f"{device_info_speakers['index']}, {device_info_speakers['name']}"
     
     def get_default_input_device_mic(self):
         # Get default input device info
-        device_info = self.pa_mic.get_default_input_device_info()
+        device_info_mic = self.pa_mic.get_default_input_device_info()
         
         # Return device name with index number
-        return f"{device_info['index']}, {device_info['name']}"
+        return f"{device_info_mic['index']}, {device_info_mic['name']}"
 
     def get_default_output_device_mic(self):
         # Get default input device info
-        device_info = self.pa_mic.get_default_output_device_info()
+        device_info_mic = self.pa_mic.get_default_output_device_info()
 
         # Return device name with index number
-        return f"{device_info['index']}, {device_info['name']}"
+        return f"{device_info_mic['index']}, {device_info_mic['name']}"
 
     def on_device_select_speakers(self, event):
         # Called when a dropdown selection is made
@@ -196,10 +196,10 @@ class AudioBridge:
             #print(self.output_device_index)
 
             # Get max input and output channels
-            input_info = self.pa_speakers.get_device_info_by_index(self.input_device_index)
-            output_info = self.pa_speakers.get_device_info_by_index(self.output_device_index)
-            self.input_channels_speakers = input_info['maxInputChannels']
-            self.output_channels_speakers = output_info['maxOutputChannels']
+            input_info_speakers = self.pa_speakers.get_device_info_by_index(self.input_device_index)
+            output_info_speakers = self.pa_speakers.get_device_info_by_index(self.output_device_index)
+            self.input_channels_speakers = input_info_speakers['maxInputChannels']
+            self.output_channels_speakers = output_info_speakers['maxOutputChannels']
 
             # Create new PyAudio object
             self.pa_speakers = pyaudio.PyAudio()
@@ -237,10 +237,10 @@ class AudioBridge:
         
         while not self.stop_flag:
             # Read audio data from input stream
-            input_data = self.input_stream_speakers.read(1024)
+            input_data_speakers = self.input_stream_speakers.read(1024)
 
             # Convert input data to numpy array
-            input_np_speakers = np.frombuffer(input_data, dtype=np.float32)
+            input_np_speakers = np.frombuffer(input_data_speakers, dtype=np.float32)
 
             # Reshape numpy array based on input channels
             input_np_speakers = input_np_speakers.reshape(-1, self.input_channels_speakers)
@@ -340,25 +340,25 @@ class AudioBridge:
         
         while not self.stop_flag:
             # Read audio data from input stream
-            input_data = self.input_stream_mic.read(1024)
+            input_data_mic = self.input_stream_mic.read(1024)
 
             # Convert input data to numpy array
-            input_np = np.frombuffer(input_data, dtype=np.float32)
+            input_np_mic = np.frombuffer(input_data_mic, dtype=np.float32)
 
             # Reshape numpy array based on input channels
-            input_np = input_np.reshape(-1, self.input_channels_mic)
+            input_np_mic = input_np_mic.reshape(-1, self.input_channels_mic)
 
             # Process audio data
-            output_np = self.process_audio_mic(input_np)
+            output_np_mic = self.process_audio_mic(input_np_mic)
 
             # Reshape output numpy array based on output channels
-            output_np = output_np.reshape(-1, self.output_channels_mic)
+            output_np_mic = output_np_mic.reshape(-1, self.output_channels_mic)
 
             # Convert output data to bytes
-            output_data = output_np.tobytes()
+            output_data_mic = output_np_mic.tobytes()
 
             # Write output data to output stream
-            self.output_stream_mic.write(output_data)
+            self.output_stream_mic.write(output_data_mic)
 
         # Clean up
         self.input_stream_mic.stop_stream()
@@ -376,7 +376,7 @@ class AudioBridge:
         if input_channels_mic != output_channels_mic:
             if input_channels_mic == 1 and output_channels_mic == 2:
                 # If input has 1 channel and output has 2 channels, duplicate the channel
-                input_np = np.tile(input_np_mic, (1, 2))
+                input_np_mic = np.tile(input_np_mic, (1, 2))
             elif input_channels_mic == 2 and output_channels_mic == 1:
                 # If input has 2 channels and output has 1 channel, average the channels
                 input_np_mic = np.mean(input_np_mic, axis=1, keepdims=True)
