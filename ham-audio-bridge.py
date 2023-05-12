@@ -50,13 +50,13 @@ class AudioBridge:
 
         # Create start and stop buttons (Bridge to Speakers)
         self.start_stop_label_speakers = tk.Label(self.window, text="Speaker Bridge")
-        self.start_stop_label_speakers.grid(row=0, column=3, columnspan=2, sticky="W")
+        self.start_stop_label_speakers.grid(row=0, column=2, columnspan=2, sticky="W")
         # self.start_button = tk.Button(self.window, text="Start", command=self.start)
         # self.stop_button = tk.Button(self.window, text="Stop", command=self.stop)
         self.start_button_speakers = tk.Button(self.window, text="Start", command=lambda: self.start_speakers())
         self.stop_button_speakers = tk.Button(self.window, text="Stop", command=lambda: self.stop_all())
-        self.start_button_speakers.grid(row=1, column=3, padx=5, pady=5, sticky="W")
-        self.stop_button_speakers.grid(row=1, column=4, padx=5, pady=5)
+        self.start_button_speakers.grid(row=1, column=2, padx=5, pady=5, sticky="W")
+        self.stop_button_speakers.grid(row=1, column=2, padx=50, pady=5, sticky="W")
         self.stop_button_speakers.config(state=tk.DISABLED)
 
         # Set default audio devices (Bridge to Speakers)
@@ -77,13 +77,13 @@ class AudioBridge:
 
         # Create start and stop buttons (Bridge to Mic)
         self.start_stop_label_mic = tk.Label(self.window, text="Mic Bridge")
-        self.start_stop_label_mic.grid(row=4, column=3, columnspan=2, sticky="W")
+        self.start_stop_label_mic.grid(row=4, column=2, columnspan=2, sticky="W")
         # self.start_button2 = tk.Button(self.window, text="Start", command=self.start2)
         # self.stop_button2 = tk.Button(self.window, text="Stop", command=self.stop2)
         self.start_button_mic = tk.Button(self.window, text="Start", command=lambda: self.start_mic())
         self.stop_button_mic = tk.Button(self.window, text="Stop", command=lambda: self.stop_all())
-        self.start_button_mic.grid(row=5, column=3, padx=5, pady=5, sticky="W")
-        self.stop_button_mic.grid(row=5, column=4, padx=5, pady=5)
+        self.start_button_mic.grid(row=5, column=2, padx=5, pady=5, sticky="W")
+        self.stop_button_mic.grid(row=5, column=2, padx=50, pady=5, sticky="W")
         self.stop_button_mic.config(state=tk.DISABLED)
 
         # Set default audio devices (Bridge to Mic)
@@ -102,11 +102,11 @@ class AudioBridge:
 
         # Create Baud Rate dropdown
         self.baud_rate_label = tk.Label(self.window, text="Baud Rate:")
-        self.baud_rate_label.grid(row=6, column=1)
+        self.baud_rate_label.grid(row=6, column=1, pady=5, padx=90, sticky="W")
         self.baud_rate_var = tk.IntVar(self.window)
         self.baud_rate_var.set(9600) # Set default baud rate
         self.baud_rate_dropdown = tk.OptionMenu(self.window, self.baud_rate_var, 9600, 19200, 38400, 57600, 115200)
-        self.baud_rate_dropdown.grid(row=6, column=1, sticky="E")
+        self.baud_rate_dropdown.grid(row=6, column=1, pady=5, padx=150, sticky="W")
 
         # Create transmit button
         self.transmit_label = tk.Label(self.window, text="Push to talk:")
