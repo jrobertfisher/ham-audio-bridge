@@ -203,10 +203,10 @@ class AudioBridge:
 
             # Create new PyAudio object
             self.pa_speakers = pyaudio.PyAudio()
-            self.input_stream_speakers = self.pa_speakers.open(format=pyaudio.paFloat32, channels=self.input_channels_speakers, rate=44100,
+            self.input_stream_speakers = self.pa_speakers.open(format=pyaudio.paFloat32, channels=self.input_channels_speakers, rate=48000, #rate=44100
                                             input=True, input_device_index=self.input_device_index,
                                             frames_per_buffer=1024)
-            self.output_stream_speakers = self.pa_speakers.open(format=pyaudio.paFloat32, channels=self.output_channels_speakers, rate=44100,
+            self.output_stream_speakers = self.pa_speakers.open(format=pyaudio.paFloat32, channels=self.output_channels_speakers, rate=48000, #rate=44100
                                             output=True, output_device_index=self.output_device_index,
                                             frames_per_buffer=1024)
             self.stop_button_speakers.config(state=tk.NORMAL)
@@ -300,10 +300,10 @@ class AudioBridge:
 
             # Create new PyAudio object
             self.pa_mic = pyaudio.PyAudio()
-            self.input_stream_mic = self.pa_mic.open(format=pyaudio.paFloat32, channels=self.input_channels_mic, rate=44100,
+            self.input_stream_mic = self.pa_mic.open(format=pyaudio.paFloat32, channels=self.input_channels_mic, rate=48000, #rate=44100
                                             input=True, input_device_index=self.input_device_index,
                                             frames_per_buffer=1024)
-            self.output_stream_mic = self.pa_mic.open(format=pyaudio.paFloat32, channels=self.output_channels_mic, rate=44100,
+            self.output_stream_mic = self.pa_mic.open(format=pyaudio.paFloat32, channels=self.output_channels_mic, rate=48000, #rate=44100
                                             output=True, output_device_index=self.output_device_index,
                                             frames_per_buffer=1024)
             self.stop_button_mic.config(state=tk.NORMAL)
