@@ -1,6 +1,9 @@
-# ham-audio-bridge v1.0
-# written by Rob Fisher - KI5QPY
-# initial release 5/12/2023
+# HAM Audio Bridge
+# Written by Rob Fisher - KI5QPY
+# Release Notes v1.0.1 - 5/13/2023
+#   Added Squelch on the speaker function.
+#   Reduced the speaker and mic output gain from 2 to 1.
+#   Closes active threads on exit.
 
 import pyaudio
 import tkinter as tk
@@ -8,9 +11,11 @@ from tkinter import ttk
 import threading
 import numpy as np; #print(np.__file__)
 import serial
-import traceback
+#import traceback
+#import scipy.signal
+#from pydub import AudioSegment
 
-class AudioBridge:
+class AudioBridge():
     def __init__(self):
         # Initialize PyAudio object
         self.pa_speakers = pyaudio.PyAudio()
@@ -31,6 +36,8 @@ class AudioBridge:
         self.output_stream_mic = None
         self.audio_thread_mic = None
         self.ser = None
+        self.squelch = 0.00
+        self.sample_rate_speakers = 48000
 
         # Create GUI window
         self.window = tk.Tk()
@@ -50,9 +57,7 @@ class AudioBridge:
 
         # Create start and stop buttons (Bridge to Speakers)
         self.start_stop_label_speakers = tk.Label(self.window, text="Speaker Bridge")
-        self.start_stop_label_speakers.grid(row=0, column=2, columnspan=2, sticky="W")
-        # self.start_button = tk.Button(self.window, text="Start", command=self.start)
-        # self.stop_button = tk.Button(self.window, text="Stop", command=self.stop)
+        self.start_stop_label_speakers.grid(row=0, column=2, sticky="W")
         self.start_button_speakers = tk.Button(self.window, text="Start", command=lambda: self.start_speakers())
         self.stop_button_speakers = tk.Button(self.window, text="Stop", command=lambda: self.stop_all())
         self.start_button_speakers.grid(row=1, column=2, padx=5, pady=5, sticky="W")
@@ -77,9 +82,7 @@ class AudioBridge:
 
         # Create start and stop buttons (Bridge to Mic)
         self.start_stop_label_mic = tk.Label(self.window, text="Mic Bridge")
-        self.start_stop_label_mic.grid(row=4, column=2, columnspan=2, sticky="W")
-        # self.start_button2 = tk.Button(self.window, text="Start", command=self.start2)
-        # self.stop_button2 = tk.Button(self.window, text="Stop", command=self.stop2)
+        self.start_stop_label_mic.grid(row=4, column=2, sticky="W")
         self.start_button_mic = tk.Button(self.window, text="Start", command=lambda: self.start_mic())
         self.stop_button_mic = tk.Button(self.window, text="Stop", command=lambda: self.stop_all())
         self.start_button_mic.grid(row=5, column=2, padx=5, pady=5, sticky="W")
@@ -106,7 +109,15 @@ class AudioBridge:
         self.baud_rate_var = tk.IntVar(self.window)
         self.baud_rate_var.set(9600) # Set default baud rate
         self.baud_rate_dropdown = tk.OptionMenu(self.window, self.baud_rate_var, 9600, 19200, 38400, 57600, 115200)
-        self.baud_rate_dropdown.grid(row=6, column=1, pady=5, padx=150, sticky="W")
+        self.baud_rate_dropdown.grid(row=6, column=1, pady=5, padx=(150,0), sticky="W")
+
+        # Create Squelch slider to reduce quiet noise.
+        self.squelch_label = tk.Label(self.window, text="Squelch:")
+        self.squelch_label.grid(row=7, column=1, pady=5, padx=90, sticky="W")
+        self.squelch_var = tk.DoubleVar()
+        self.squelch_var.set(0.01)
+        self.squelch_slider = ttk.Scale(self.window, from_=0.00032, to=0.01, variable=self.squelch_var, orient=tk.HORIZONTAL, length=70, command=self.update_squelch)
+        self.squelch_slider.grid(row=7, column=1, pady=5, padx=(150,0), sticky="W")
 
         # Create transmit button
         self.transmit_label = tk.Label(self.window, text="Push to talk:")
@@ -119,8 +130,8 @@ class AudioBridge:
         self.red_light = tk.Label(self.window, bg="#F0F0F0", width=1, height=1, bd=0, highlightthickness=1, highlightbackground="gray", relief="solid")
         self.red_light.grid(row=7, column=1, stick="W", padx=5, pady=5)
 
-
         # Start GUI loop
+        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
         self.window.mainloop()
 
     def stop_all(self):
@@ -203,10 +214,10 @@ class AudioBridge:
 
             # Create new PyAudio object
             self.pa_speakers = pyaudio.PyAudio()
-            self.input_stream_speakers = self.pa_speakers.open(format=pyaudio.paFloat32, channels=self.input_channels_speakers, rate=48000, #rate=44100
+            self.input_stream_speakers = self.pa_speakers.open(format=pyaudio.paFloat32, channels=self.input_channels_speakers, rate=self.sample_rate_speakers, #rate=44100
                                             input=True, input_device_index=self.input_device_index,
                                             frames_per_buffer=1024)
-            self.output_stream_speakers = self.pa_speakers.open(format=pyaudio.paFloat32, channels=self.output_channels_speakers, rate=48000, #rate=44100
+            self.output_stream_speakers = self.pa_speakers.open(format=pyaudio.paFloat32, channels=self.output_channels_speakers, rate=self.sample_rate_speakers, #rate=44100
                                             output=True, output_device_index=self.output_device_index,
                                             frames_per_buffer=1024)
             self.stop_button_speakers.config(state=tk.NORMAL)
@@ -228,32 +239,23 @@ class AudioBridge:
         self.input_stream_speakers.close()
         self.output_stream_speakers.stop_stream()
         self.output_stream_speakers.close()
-        #self.pa.terminate() # Close PyAudio object
-        #self.pa.terminate()
         self.start_button_speakers.config(state=tk.NORMAL)
         self.stop_button_speakers.config(state=tk.DISABLED)
 
     def run_audio_loop_speakers(self):
-        
         while not self.stop_flag:
             # Read audio data from input stream
             input_data_speakers = self.input_stream_speakers.read(1024)
-
             # Convert input data to numpy array
             input_np_speakers = np.frombuffer(input_data_speakers, dtype=np.float32)
-
             # Reshape numpy array based on input channels
             input_np_speakers = input_np_speakers.reshape(-1, self.input_channels_speakers)
-
             # Process audio data
             output_np_speakers = self.process_audio_speakers(input_np_speakers)
-
             # Reshape output numpy array based on output channels
             output_np_speakers = output_np_speakers.reshape(-1, self.output_channels_speakers)
-
             # Convert output data to bytes
             output_data_speakers = output_np_speakers.tobytes()
-
             # Write output data to output stream
             self.output_stream_speakers.write(output_data_speakers)
 
@@ -264,11 +266,32 @@ class AudioBridge:
         self.output_stream_speakers.close()
         self.pa_speakers.terminate()
 
-    def process_audio_speakers(self, input_np_speakers): #might need to change to "input_np_speakers"
+    # def process_audio_speakers(self, input_np_speakers): #might need to change to "input_np_speakers"
+    #     # Get number of input and output channels
+    #     input_channels_speakers = input_np_speakers.shape[1]
+    #     output_channels_speakers = self.output_channels_speakers
+        
+    #     # Convert input numpy array if number of channels doesn't match
+    #     if input_channels_speakers != output_channels_speakers:
+    #         if input_channels_speakers == 1 and output_channels_speakers == 2:
+    #             # If input has 1 channel and output has 2 channels, duplicate the channel
+    #             input_np_speakers = np.tile(input_np_speakers, (1, 2))
+    #         elif input_channels_speakers == 2 and output_channels_speakers == 1:
+    #             # If input has 2 channels and output has 1 channel, average the channels
+    #             input_np_speakers = np.mean(input_np_speakers, axis=1, keepdims=True)
+        
+    #     # Process the input numpy array and return the output numpy array
+    #     output_np_speakers = input_np_speakers * 2.0
+    #     return output_np_speakers
+
+    def update_squelch(self, event=None):
+        self.squelch = self.squelch_var.get()
+
+    def process_audio_speakers(self, input_np_speakers):
         # Get number of input and output channels
         input_channels_speakers = input_np_speakers.shape[1]
         output_channels_speakers = self.output_channels_speakers
-        
+
         # Convert input numpy array if number of channels doesn't match
         if input_channels_speakers != output_channels_speakers:
             if input_channels_speakers == 1 and output_channels_speakers == 2:
@@ -277,9 +300,21 @@ class AudioBridge:
             elif input_channels_speakers == 2 and output_channels_speakers == 1:
                 # If input has 2 channels and output has 1 channel, average the channels
                 input_np_speakers = np.mean(input_np_speakers, axis=1, keepdims=True)
-        
-        # Process the input numpy array and return the output numpy array
-        output_np_speakers = input_np_speakers * 2.0
+
+        # Apply a high-pass filter - not working well
+        #b_hp, a_hp = scipy.signal.butter(2, 120, 'highpass', fs=self.sample_rate_speakers)
+        #input_np_speakers = scipy.signal.lfilter(b_hp, a_hp, input_np_speakers)
+
+        # Apply a low-pass filter - not working well
+        #b_lp, a_lp = scipy.signal.butter(2, 10000, 'lowpass', fs=self.sample_rate_speakers)
+        #input_np_speakers = scipy.signal.lfilter(b_lp, a_lp, input_np_speakers)
+
+        # Apply a noise gate to the input numpy array
+        output_np_speakers = np.where(np.abs(input_np_speakers) < self.squelch, 0, input_np_speakers)
+
+        # Scale the output numpy array
+        output_np_speakers *= 1.0
+
         return output_np_speakers
     
     def start_mic(self):
@@ -300,10 +335,10 @@ class AudioBridge:
 
             # Create new PyAudio object
             self.pa_mic = pyaudio.PyAudio()
-            self.input_stream_mic = self.pa_mic.open(format=pyaudio.paFloat32, channels=self.input_channels_mic, rate=48000, #rate=44100
+            self.input_stream_mic = self.pa_mic.open(format=pyaudio.paFloat32, channels=self.input_channels_mic, rate=self.sample_rate_speakers,
                                             input=True, input_device_index=self.input_device_index,
                                             frames_per_buffer=1024)
-            self.output_stream_mic = self.pa_mic.open(format=pyaudio.paFloat32, channels=self.output_channels_mic, rate=48000, #rate=44100
+            self.output_stream_mic = self.pa_mic.open(format=pyaudio.paFloat32, channels=self.output_channels_mic, rate=self.sample_rate_speakers,
                                             output=True, output_device_index=self.output_device_index,
                                             frames_per_buffer=1024)
             self.stop_button_mic.config(state=tk.NORMAL)
@@ -337,7 +372,6 @@ class AudioBridge:
         self.transmit.config(state=tk.DISABLED)
 
     def run_audio_loop_mic(self):
-        
         while not self.stop_flag:
             # Read audio data from input stream
             input_data_mic = self.input_stream_mic.read(1024)
@@ -382,7 +416,8 @@ class AudioBridge:
                 input_np_mic = np.mean(input_np_mic, axis=1, keepdims=True)
         
         # Process the input numpy array and return the output numpy array
-        output_np_mic = input_np_mic * 2.0
+        output_np_mic = input_np_mic * 1.0
+
         return output_np_mic
 
     def transmit_clicked(self):
@@ -413,6 +448,18 @@ class AudioBridge:
                 self.red_light.configure(bg="#00C800") #Green
             self.ser = None
 
+# def cleanup():
+#     for thread in threading.enumerate():
+#         if thread.is_active():
+#                 thread.stop()
+
+    def on_close(self):
+        # global bridge
+        # if bridge is not None:
+        self.stop_flag = True
+        self.stop_speakers()
+        self.stop_mic()
+        self.window.destroy()
 
 if __name__ == "__main__":
     bridge = AudioBridge()
