@@ -1,10 +1,15 @@
 # HAM Audio Bridge
 # Written by Rob Fisher - KI5QPY
+# Release Notes v1.0.0 - 5/12/2023
+#   Initial Release
 # Release Notes v1.0.1 - 5/13/2023
 #   Added Squelch on the speaker function.
 #   Reduced the speaker and mic output gain from 2 to 1.
 #   Closes active threads on exit.
+# Release Notes v1.0.2 - 5/13/2023
+#   Fixed an undefined join object attribute when nothing was started.
 
+#import os
 import pyaudio
 import tkinter as tk
 from tkinter import ttk
@@ -42,6 +47,8 @@ class AudioBridge():
         # Create GUI window
         self.window = tk.Tk()
         self.window.title("HAM Audio Bridge v1.0 by KI5QPY")
+        #icon_path = os.path.join(os.path.dirname(__file__), 'hab.ico')
+        #self.window.iconbitmap(icon_path)
 
         # Create labels for input and output devices (Bridge to Speakers)
         tk.Label(self.window, text="Input Device:").grid(row=0, column=0, padx=5, pady=5)
@@ -229,16 +236,20 @@ class AudioBridge():
             self.audio_thread_speakers.start()
         except Exception as e:
             print(f"Error: {e}")
-            traceback.print_exc()
+            #traceback.print_exc()
 
     def stop_speakers(self):
         # Stop audio bridge
         self.stop_flag = True
-        self.audio_thread_speakers.join()
-        self.input_stream_speakers.stop_stream()
-        self.input_stream_speakers.close()
-        self.output_stream_speakers.stop_stream()
-        self.output_stream_speakers.close()
+        try:
+            self.audio_thread_speakers.join()
+            self.input_stream_speakers.stop_stream()
+            self.input_stream_speakers.close()
+            self.output_stream_speakers.stop_stream()
+            self.output_stream_speakers.close()
+        except Exception as e:
+            print(f"Error: {e}")
+            #traceback.print_exc()
         self.start_button_speakers.config(state=tk.NORMAL)
         self.stop_button_speakers.config(state=tk.DISABLED)
 
@@ -354,16 +365,20 @@ class AudioBridge():
             self.red_light.configure(bg="#00C800") #Green
         except Exception as e:
             print(f"Error: {e}")
-            traceback.print_exc()
+            #traceback.print_exc()
 
     def stop_mic(self):
         # Stop audio bridge
         self.stop_flag = True
-        self.audio_thread_mic.join()
-        self.input_stream_mic.stop_stream()
-        self.input_stream_mic.close()
-        self.output_stream_mic.stop_stream()
-        self.output_stream_mic.close()
+        try:
+            self.audio_thread_mic.join()
+            self.input_stream_mic.stop_stream()
+            self.input_stream_mic.close()
+            self.output_stream_mic.stop_stream()
+            self.output_stream_mic.close()
+        except Exception as e:
+            print(f"Error: {e}")
+            #traceback.print_exc()
         #self.pa_mic.terminate() # Close PyAudio object
         #self.pa_mic.terminate()
         self.start_button_mic.config(state=tk.NORMAL)
@@ -463,3 +478,4 @@ class AudioBridge():
 
 if __name__ == "__main__":
     bridge = AudioBridge()
+    bridge.window.mainloop()
